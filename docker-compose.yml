@@ -1,0 +1,87 @@
+version: "3.9"
+networks:
+  laravelDocker:
+    name: laravelDocker
+services:
+
+  app:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: laravelDockerApp
+    working_dir: /var/www/html
+    ports:
+      - ${NGINX_PORT:-80}:8080
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks:
+      - laravelDocker
+    volumes:
+      - ./docker/nginx/logs:/var/log/nginx
+      - ./docker/php/fpm_logs:/var/log/php-fpm
+      - ./src:/var/www/html
+    restart: unless-stopped
+    command: ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+    depends_on:
+      - redis
+      - mysql
+
+  artisan:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: laravelDockerArtisan
+    working_dir: /var/www/html
+    networks:
+      - laravelDocker
+    volumes:
+      - ./src:/var/www/html
+    restart: unless-stopped
+    entrypoint: ["php", "artisan"]
+    depends_on:
+      - app
+    profiles:
+      - donotstart
+
+  composer:
+    image: composer:latest
+    user: ${GID:-1000}:${UID:-1000}
+    container_name: laravelDockerComposer
+    environment:
+      - COMPOSER_HOME=/home/composer
+      - COMPOSER_CACHE_DIR=/home/composer/.cache
+    volumes:
+      - ./docker/composer/home:/home/composer
+      - ./docker/composer/cache:/home/composer/.cache
+      - ./src:/app
+    profiles:
+      - donotstart
+
+  redis:
+    image: "redis:alpine"
+    user: ${GID:-1000}:${UID:-1000}
+    container_name: laravelDockerRedis
+    restart: unless-stopped
+    networks:
+      - laravelDocker
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  mysql:
+    image: library/mysql:8.0.25
+    user: ${GID:-1000}:${UID:-1000}
+    container_name: laravelDockerMySQL
+    ports:
+      - ${MYSQL_PORT:-3306}:3306
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-laravelDockerPassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-laravelDocker}
+      MYSQL_USER: ${MYSQL_USERNAME:-laravelDocker}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-laravelDockerPassword}
+    networks:
+      - laravelDocker
