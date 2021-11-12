@@ -14,8 +14,8 @@ RUN usermod -u $UID www-data
 
 # copy configs
 COPY --chown=www-data:www-data ./docker/supervisor /etc/supervisor
-COPY --chown=www-data:www-data docker/nginx/nginx.conf /etc/nginx/nginx.conf
-COPY --chown=www-data:www-data docker/nginx/nginx-site.conf /etc/nginx/conf.d/default.conf
+COPY --chown=www-data:www-data ./docker/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY --chown=www-data:www-data ./docker/nginx/nginx-site.conf /etc/nginx/conf.d/default.conf
 COPY --chown=www-data:www-data ./docker/php/php.ini /usr/local/etc/php/php.ini
 COPY --chown=www-data:www-data ./docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
 
